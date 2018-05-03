@@ -1,0 +1,273 @@
+---
+title: "Do US Multinational Firms Prefer Tax Havens?"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+News about US firms stashed money in tax havens country have caught attention of the public. Using tax havens is not new for US multinational corporations, and the strategy can be traced back to 1960s when those small island countries with limited resources wanted to attract foreign investments. But this strategy has not gotten seriously criticized until 2000 when OECD published a list of 35 tax havens and required them to accept the agreement of transparency and effective exchange of information. All of a sudden, uneasiness swept tax havens countries. Moreover, OECD made a further bold move implementing BEPS (Base Erosion and Profit Shifting) action with the intent of eliminating uncooperative tax havens. Although the attack to tax haven countries has been decades, most multinational corporations, especially US multinationals, have taken the strategy for granted. According to a report from the Institute on Taxation and Economic Policy, 366 of the country's 500 largest companies maintain at least 9,755 tax haven subsidiaries where they hold over 2.6 trillion in accumulated profits. Apple is at the very top of the offshore cash pile, booking 246 billion and avoiding 76.7 billion dollars in U.S. taxes in the process (Forbes News, 2017). Not only researchers but also US citizens should concern about this issue, because, if it is true, the US multinational firms' unpaid tax would be a burden of the public. 
+
+According to Hines (2010), there are 35 regions are classified as tax havens, of which Switzerland, Ireland, Hongkong and Singapore rank as the Big Four. Compare with 195 countries in the world, the number of tax havens is trivial. So, the first question--is it real that US multinationals prefer going to tax havens for the benefits in those countries? Empirically speaking, is there really a difference between investing in tax havens and non-havens for US multinationals?
+
+Using the panel data from FDIMarket Database, I can try exploring this question. After cleaning the data, I got the dataset with 1734 observations and 24 variables. The data is project-level and include all industries. The time interval is 2003-2010. The reason of using this time window is that 2003 is the earliest year in the database and I want to include 2008, a year with financial crisis to see if there is more information I would get. 
+
+My model is to see that whether being a tax haven would attract more real FDI which I define as the ratio of capital investment by jobs created.
+Therefore, the dependent variable is the ratio, Cap.job. The explanatory variable is an indicator, tax haven status, with 1 as a tax haven and 0 otherwise. This paper uses fixed effects regression with industry and year fixed to extract the effect of tax haven status on real FDI. One of the reasons I use fixed effects is that it is a way to control for unobserved but fixed omitted variables (Angrist & Pischke, 2008).
+```{r}
+# put all the package I am using here
+
+library(ggplot2)
+library(gplots)
+library(foreign)
+library(plyr)
+library(stargazer)
+library(lmtest)
+library(sandwich)
+```
+
+
+
+```{r}
+fdi.df2=read.csv("/Users/natexu/Documents/PhD classes/PS531/project_ps531/UStaxhaven_531_3.csv")
+summary(fdi.df2)
+str(fdi.df2)
+quantile(fdi.df2$Cap.job)
+
+```
+First, before going deep into the data, having a general sense of the data by visualizing is helpful to my later analysis.
+Plotting the capital investments grouped by year, we can see that ther are some extreme values in each year except 2010.
+Second, I also want to see what the difference is in capital investment in general between tax havens and non-havens. 
+It turns out that there are no extreme values in the non-haven group.
+```{r}
+
+ggplot(fdi.df2, aes(x=Year, y=Capital.Investment))+
+  theme_bw() +
+  geom_point()
+
+ggplot(fdi.df2, aes(x=Haven, y=Capital.Investment, group=Haven))+
+  theme_bw() +
+  geom_point()
+
+# But this graph shows something interesting. 
+# Using my dependent variable, there exists an extreme case.
+ggplot(fdi.df2, aes(x=Haven, y=Cap.job, group=Haven))+
+  theme_bw() +
+  geom_point()
+
+```
+
+
+Tax havens are places include the so-called Big Four in which Hong Kong, Singapore, Ireland, and Switzerland, and other small islands such as Bermuda, Cayman islands and Bahamas, so we may ask that which industry has a preference for tax haven? I have data including all industries, and thus maybe I can take an initial look. It turns out that too many industries make the graph not easy to read, but we can notice that in the tax haven group the reddish part seems bigger indicating industries such as real estate, rubber, semiconductors, etc.
+```{r}
+# Look at to which industry foreign FDIs are invested
+ggplot(fdi.df2, aes(x = Haven, fill=Industry.Sector))+
+    theme_bw() +
+    geom_histogram()+
+    stat_bin(bins = 20)
+
+# Take a look at my dependent variable
+ggplot(fdi.df2, aes(x = Cap.job, fill=Industry.Sector))+
+    theme_bw() +
+    geom_histogram()+
+    stat_bin(bins = 20)
+```
+
+I also want to know what the means look like. The graphs below draw a 95% confidence interval around the means. These plots are intriguing. 
+The first graph shows that the general trend of FDI is decreasing from 2003 to 2007, and after a sudden increase between 2007 and 2008, the dowward trend shows up again.  
+But my interested dependent variable tells another story. The capital investment per job undergoes a big drop from 2003 to 2004, and pick up from 2004.
+Moreover, the mean difference between havens and non-havens in terms of capital investments per job is not trivial.
+
+```{r}
+
+plotmeans(Capital.Investment ~ Year, main="FDI 2003-2010", data =fdi.df2 )
+
+plotmeans(Cap.job ~ Year, main="heterogeineity across years", data =fdi.df2 )
+
+plotmeans(Cap.job ~ Haven, main="heterogeineity between havens and non-havens", data =fdi.df2 )
+
+```
+
+
+After exploring the data, the general sense is that the trend of FDI does not always conform to the capital investment per job. The different trend indicates MNEs business practice such as investing and laying off employees. There seems to be an industry difference, although not very clear from the histogram.
+
+The next step is to make a deep dive into the data to see if my question could be answered in some way. As I mentioned, I am using fexed effects regression. My null hypothesis is that there is no difference in real FDI between tax haven and non-haven countries.
+
+I would like to start with OLS as basline model without any fixed effects to see if there is relationship in general, and compare the results to make a better judgement. The result indicates that the null hypothesis cannot be rejected.
+
+But the question is that I do not control anything. What is the difference between controlling for and fixed effects? First, a covariate is a variable that affects both the explanatory and outcome variables. For example, when I am treating industry as a fixed parameter, I assume that industry difference will not change over time. If I am controlling for industry difference, I am actually thinking that industry difference affects a country's status of being a tax haven, which is not my argument.
+```{r}
+# baseline linear model
+lm1<-lm(Cap.job ~ Haven + Industry.Sector + Year, data = fdi.df2)
+summary(lm1)
+plot(lm1)
+```
+
+```{r}
+#fixed effect
+attach(fdi.df2)
+fdi.df2$Year<-as.numeric(Year)
+fdi.df2$Industry.Sector<-as.numeric(Industry.Sector)
+
+# I will do two steps to transform my data to do the fixed effects
+
+# First, Industry Transformation. 
+# Step 1. Split data (Using "ddply") by industry. 
+# Step 2. Calculating de-mean of X by subtracting from X(Haven) the average of X in the corresponding industry. 
+# Step 3. Subtracting from Y(Cap.job) the average of Y calculated from the corresponding industry group.
+
+fdi.yeardata4<-ddply(fdi.df2,.(Industry.Sector), 
+                     transform,
+                     gmeanHaven= mean(Haven),  
+                     gmeanCapjob= mean(Cap.job),
+                     dmean_x1= Haven - mean(Haven),
+                     dmean_y1= Cap.job-mean(Cap.job))
+
+
+# Second, Year Transformation. I take the industry-transformed data to do the year transformation. 
+# Step 1. Split data (Using "ddply") by Year.
+# Step 2. Calculating a new de-mean of X by subtracting from dmean_x1 (industry-transformed X) the average of dmean_x1 (industry-transformed) calculated from the coreespoding Year group. 
+# Setp 3. Subtracting from deman_y1 (industry-transformed Y) the average of dmean_y calculated from the corresponding year group. 
+fdi.yeardata5<-ddply(fdi.yeardata4,.(Year), 
+                     transform, y=Cap.job,
+                     dmean_x2= dmean_x1 - mean(dmean_x1),
+                     dmean_y2= dmean_y1 - mean(dmean_y1))
+
+
+# fixed effect model
+# A problem is that when I transform my data twice, I eat up many degree of freedom which is crucial for calculating my standard errors.
+fe7<-lm(dmean_y2 ~ dmean_x2, data = fdi.yeardata5) 
+summary(fe7)
+```
+```{r}
+#fixed effect on the interaction of IND and Year
+attach(fdi.df2)
+fdi.df2$Year<-as.numeric(Year)
+fdi.df2$Industry.Sector<-as.numeric(Industry.Sector)
+
+# Just as I did in the last chunk using the traditional fixed effects,
+# I will take two steps to generate the interaction between the group mean of x in each industry and the group mean of x in each year. 
+
+# First, using ddply split the data by Industry and generate the group mean of Haven and the group mean of Cap.job.
+fdi.yeardata6<-ddply(fdi.df2,.(Industry.Sector), 
+                     transform,
+                     gmeanHaven2= mean(Haven),
+                     gmeanCapjob2= mean(Cap.job))
+
+# Second, I take the dataset which I just added two columns to the orginial dataset and then split the data by Year.
+# Using ddply, I generate the group mean of Cap.job and the group mean of Haven in each Year.
+fdi.yeardata7<-ddply(fdi.yeardata6,.(Year), 
+                     transform, 
+                     gmeanCapjob3= mean(Cap.job),
+                     gmeanHaven3= mean(Haven))
+
+# Last, I run the two-way fixed-effects regression with the interaction between industry and year fixed.
+attach(fdi.yeardata7)
+dmean_x4 <- Haven - gmeanHaven2*gmeanHaven3
+dmean_y4 <- Cap.job - gmeanCapjob2*gmeanCapjob3
+
+
+# fixed effect model
+# A problem is that when I transform my data twice, I eat up many degree of freedom which is crucial for calculating my standard errors.
+fe8<-lm(dmean_y4 ~ dmean_x4, data = fdi.yeardata7) 
+summary(fe8) # compared with the traditional fixed effects, using the interaction term gives me a different result--the coefficient is smaller.
+summary(fe7) # the traditional fixed effects.
+```
+
+
+```{r}
+# adjust for the SEs (This is remained to be done, the HC may not be the right SE)
+
+coeftest(fe7) # this is the orginal coefficient
+
+coeftest(fe7, vcovHC)
+
+coeftest(fe7, vcovHC(fe7, method = "arellano"))
+
+t(sapply(c("HC0", "HC1", "HC2", "HC3", "HC4"), function(x) sqrt(diag(vcovHC(fe7, type = x)))))[,1]
+
+# So if I use HC2, I will have my t value 13.91
+0.099933/0.007179402
+```
+
+```{r}
+# I want to use permutation and calculate p value, although my fixed effects already reported a p value. 
+# I am doing this because statistical inference is based on repeating.
+# Doing Permutation implies two things. First, I treat my research question as an experiment,
+# whcih is appropriate because tax haven status may not be the real reason of attracting FDI if we just shuffle this treatment. 
+# Second, I am not relying on the p value from the fixed effects regression. P value is a measure of information, and so
+# it will clarify whether I have enough information against my null hypothesis.
+
+# After permuting, I draw the density graph.
+# The bule line is the coefficient of traditional fixed effects which I transform my data twice and subtract the de-meaned data from my variables twice.
+# The green line stands for the coefficient from doing fixed effects on the interaction term between industry and Year in which
+# I transform my data twice but subtract the interaction from my variables. This method is supported by the method literature (e.g. Imai & Kim, 2016).
+# Doing fixed effects in this way offers a better way to interpret my result.
+
+myexp <- function(y){
+  shufx <- sample(fdi.yeardata4$dmean_x)
+  coeffx <- coef(lm(y~shufx))[["shufx"]]
+  return(coeffx)
+}
+
+set.seed(333)
+distcoeffx <- replicate(10000, myexp(y=fdi.yeardata4$dmean_y))
+
+plot(density(distcoeffx))
+rug(distcoeffx,col="black",line=0)
+abline(v=mean(distcoeffx), col="red")
+abline(v=coef(summary(fe7))[2,1], col="blue") 
+abline(v=coef(summary(fe8))[2,1], col="green") 
+
+# my p value
+mean(distcoeffx>=coef(summary(fe7))[2,1])
+# Rosenbaum 2-sided p value
+2*min(mean(distcoeffx >= coef(summary(fe7))[2,1]),mean(distcoeffx <= coef(summary(fe7))[2,1]))
+
+```
+
+```{r}
+# Make nice figure and report
+
+# The summary statistics of my data
+# I want the table to be output into my working directory
+stargazer(fdi.df2,title = "Summary Statisitcs", out = "Summary Statisitcs.htm")
+
+# The regression table
+# I want the talbe to be ouput into my working directory
+stargazer(fe7, fe8, type = "html", 
+          dep.var.labels = c("FDI/Job_T","FDI/Job_I"),
+          covariate.labels = c("Haven(=1)","Haven(=1)"),
+          out = "fixed.effects.models.htm",
+          title="Two-way Fixed-Effects Regression Results",
+          align = T )
+
+```
+
+
+
+
+# Questions needed to answer next
+
+First, fixed effects is a way to control unobservable effects, but difference in difference can also do that. How should I choose between them?
+
+Second, why do I get different result using OLS and fixed effects? Is it because of the transformation I have done is wrong? I noticed that the degree of freedom is different in two cases, and is that the problem here?
+
+Third, in the whole process I did not control firm-level difference, which could be a problem. So, I am going to get firms' revenue data in the next few days.
+
+
+
+## References
+https://www.forbes.com/sites/niallmccarthy/2017/10/24/which-u-s-companies-have-the-most-tax-havens-infographic/#693d8b7a5706
+Hines Jr, J. R. (2010). Treasure islands. Journal of Economic Perspectives, 24(4), 103-26.
+Angrist, J. D., & Pischke, J. S. (2008). Mostly harmless econometrics: An empiricist's companion. Princeton university press.
+Imai, K., & Kim, I. S. (2016). When Should We Use Linear Fixed Effects Regression Models for Causal Inference with Longitudinal Data?. Princeton University, August, 19.
+
+
+# decompose "tax haven" into big4 or not, caribean or not.
+
+
+
