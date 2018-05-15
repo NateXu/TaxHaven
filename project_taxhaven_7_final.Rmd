@@ -25,8 +25,16 @@ library(perm)
 library(vegan)
 ```
 
+```{r setup, include=FALSE}
+download.file(url = "https://raw.githubusercontent.com/NateXu/TaxHaven/master/UStaxhaven_531_3.csv", destfile = "taxhaven.data.csv")
+```
+
+```{r save, include=FALSE}
+fdi.df2=read.csv("taxhaven.data.csv")
+```
+
 ```{r,echo=FALSE, include=FALSE}
-fdi.df2=read.csv("/Users/natexu/Documents/PhD classes/PS531/project_ps531/UStaxhaven_531_3.csv")
+
 summary(fdi.df2)
 str(fdi.df2)
 quantile(fdi.df2$Cap.job)
