@@ -2,7 +2,9 @@
 title: "Do US Multinational Firms Prefer Tax Havens?"
 author: 'Nate (Mingrui Xu)'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
-
+fontsize: 12pt
+geometry: margin=1.5in
+bibligraphy:Reference.bib
 
 output:
   pdf_document: default
@@ -23,6 +25,10 @@ library(dplyr)
 library(permute)
 library(perm)
 library(vegan)
+require(knitr)
+library(tidyverse)
+library(RefManageR)
+library(citr)
 ```
 
 ```{r setup, include=FALSE}
@@ -50,17 +56,17 @@ My model is to see that whether being a tax haven would attract more actual FDI 
 
 This paper used the panel data from FDIMarket Database. After cleaning the data, the dataset contains with 22024 observations and 24 variables. The data are project-level and include all industries. The time interval is 2003-2010. The reason of using this time window is that 2003 is the earliest year in the database and I want to include 2008, a year with financial crisis to see if there is more information I would get. Moreover, my research question is about foreign direct investment, this database would provide the appropriate information. The weakness about my data, however, is the lack of firm-level controls such as firm size. The summary statistics of the dataset is given below.
 
-```{r, echo=FALSE,message=FALSE}
-quantile(fdi.df2$Cap.job)
+```{r, results='asis',echo=FALSE,message=FALSE}
+# summary statistics and coverage rate of the DV in my data 
 
-stargazer(fdi.df2,title = "Summary Statisitcs")
+stargazer(fdi.df2,title = "Summary Statisitcs", summary = TRUE )
 
-stargazer(quantile(fdi.df2$Cap.job))
+stargazer(quantile(fdi.df2$Cap.job),title = "Coverage Interval of Cap.job ")
 ```
 
 The Index is used in the data to identify each project, and so it has the range from 1 to 22024. Year is an indicator with range from 2003 to 2010. Industry.Sector includes 39 industry categories. Capital.Investment, with the unit of million dollars, is the FDI inflow made by a firm to a host country. Capital.Investment.1 is created to transfer the unit of million dollars to thousand dollars in case that some FDI data are approximated to be 0. Jobs.Created is the actual and estimated jobs created by each FDI project. Cap.job is my dependent variable, it is the result of Capital. Investment divided by Jobs.Created. To make the ratio meaningful, I eliminated 9 FDI projects with 0 job created. This ratio has the mean of 0.546, meaning the capital investments for each job created by an FDI project, on average, is 0.546 million dollars. Haven is an indicator of the destination country with 1 for a tax haven country and 0 for a non-haven country.
 
-Before going deep into the research design, I would like to explore the data. The graphs below drew a 95% confidence interval around the means. The first graph shows that the general trend of FDI is decreasing from 2003 to 2007, and after a sharp increase between 2007 and 2008, the downward trend shows up again. 
+Before going deep into the research design, I would like to explore the data. The graphs below drew a 95% confidence interval around the means. The first graph shows that the general trend of FDI is decreasing from 2003 to 2007, and after a sharp increase between 2007 and 2008, the downward trend shows up again.  
 
 
 ```{r,echo=FALSE, warning=FALSE}
@@ -70,7 +76,23 @@ plotmeans(Capital.Investment ~ Year, main="FDI 2003-2010", data =fdi.df2 )
 ```
 
 
-But my dependent variable (labeled as Cap.job) in the second graph tells another story. The capital investment per job undergoes a big drop from 2003 to 2004 and pick up from 2004. Compared with the previous graph about FDI trend, the ratio between capital investments and jobs created does not conform to a unified trend. The reason to use this ratio as my dependent variable, as mentioned at the beginning, is to capture the actual FDI invested into the tax havens countries. Instead of showing the use of tax havens to hide and transfer company profits or personal wealth, this ratio, I believe, would partly reveal the pull of making investment in tax havens. Additionally, the different trend revealed by the dependent variable leads me to thinking about the comparative change between capital investment and jobs created. Specifically, the ratio could be large due to either the increase of FDI or the decrease of jobs. This consideration could generate another empirical test to explain the reason behind the difference. This paper, however, only focuses on whether being a tax haven offers a country attraction of FDI inflows relative to a non-haven country.
+
+Tax havens are places include the so-called Big Four in which Hong Kong, Singapore, Ireland, and Switzerland, and other small islands such as Bermuda, Cayman Islands and Bahamas, so we may ask that which industry has a preference for tax haven? With the data including all industries, I can take an initial look. It turns out that too many industries make the graph not easy to read, but we can notice that in the tax haven group the reddish part seems bigger indicating industries such as real estate, rubber, semiconductors, etc.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Look at to which industry foreign FDIs are invested
+ggplot(fdi.df2, aes(x = Haven, fill=Industry.Sector))+
+    theme_bw() +
+    geom_histogram()+
+    stat_bin(bins = 20)+
+    ggtitle("Distribution of Industries")
+```
+
+
+
+
+But my dependent variable (labeled as Cap.job) tells another story. The capital investment per job undergoes a big drop from 2003 to 2004 and pick up from 2004. Compared with the previous graph about FDI trend, the ratio between capital investments and jobs created does not conform to a unified trend. The reason to use this ratio as my dependent variable, as mentioned at the beginning, is to capture the actual FDI invested into the tax havens countries. Instead of showing the use of tax havens to hide and transfer company profits or personal wealth, this ratio, I believe, would partly reveal the pull of making investment in tax havens. Additionally, the different trend revealed by the dependent variable leads me to thinking about the comparative change between capital investment and jobs created. Specifically, the ratio could be large due to either the increase of FDI or the decrease of jobs. This consideration could generate another empirical test to explain the reason behind the difference. This paper, however, only focuses on whether being a tax haven offers a country attraction of FDI inflows relative to a non-haven country.
+
 
 
 ```{r,echo=FALSE}
@@ -80,13 +102,18 @@ plotmeans(Cap.job ~ Year, main="Difference across Years", data =fdi.df2 )
 ```
 
 
+
 Moreover, the difference in means of capital investments per job between havens and non-havens, as shown in the graph below, is not trivial. The X-axis stands for the tax haven status with 1 for tax haven countries and 0 otherwise. Approximately, the difference in means is $0.045 million per job.
+
+
 
 ```{r,echo=FALSE, message=FALSE}
 
-plotmeans(Cap.job ~ Haven, main="Difference between havens and non-havens", data =fdi.df2 )
+plotmeans(Cap.job ~ Haven, main="Difference between Havens and Non-Havens", data =fdi.df2 )
 
 ```
+
+
 
 
 Model specification. This paper uses fixed-effects regression with industry and year fixed to estimate the effect of tax haven status on real FDI inflows. One of the reasons of using fixed effects is that it is a way to control for unobserved but fixed omitted variables (Angrist & Pischke, 2008). In other words, I believe that there are some unobserved factors in different industries and years affecting the precision of my model.
@@ -204,7 +231,8 @@ abline(v=coef(summary(fe7))[2,1], col="blue")
 abline(v=coef(summary(fe8))[2,1], col="green") 
 ```
 
-    >Note: this graph shows the permutation result under the traditional two-ways fixed effects in which the independent variable is transformed      by subtracting the industry-transformed and year-transformed data. The X-axis contains the coefficients extracted from the permutation test       after 10000 times.
+>Note: this graph shows the permutation result under the traditional two-ways fixed effects in which the independent variable is transformed      by subtracting the industry-transformed and year-transformed data. The X-axis contains the coefficients extracted from the permutation test       after 10000 times  
+
 
 The other density plot below is the permutation under the interaction-based fixed effects model. The red line is the mean of the treatment effect extracted from 10000 times permutation. The green line is the coefficient calculated from the fixed effects model based on the interaction between Industry and Year.  Visually, the green line is far from 0 but not as far as the blue line.
 
@@ -221,14 +249,15 @@ set.seed(33334)
 distcoeffx3 <- replicate(10000, myexp3(y=dmean_y4))
 
 plot(density(distcoeffx3))
-rug(distcoeffx2,col="black",line=0)
+rug(distcoeffx3,col="black",line=0)
 abline(v=mean(distcoeffx3), col="red")
 abline(v=coef(summary(fe7))[2,1], col="blue") 
 abline(v=coef(summary(fe8))[2,1], col="green") 
 
 ```
 
-    >*Note: this graph shows the permutation result under the two-ways fixed effects in which the independent variable is transformed by subtracting the interaction between industry-transformed and year-transformed data* 
+>Note: this graph shows the permutation result under the two-ways fixed effects in which the independent variable is transformed by subtracting the interaction between industry-transformed and year-transformed data  
+
 
 Taking the two plots together, we can see that the fixed-effects model based on the interaction is more conservative in terms of rejecting the null hypothesis. The shape of the first graph is not exactly the same as the second one, but this is not something problematic because my procedure guarantees my results being robust with any shape. After the first permutation, the two-sided p-value with the 5% threshold is 0 under the traditional fixed effects model, meaning than I can reject any null hypothesis and thus there is significant difference in US firms making FDI into tax havens relative to non-havens. The second permutation test generated the p-value equal to 0.0034 under the fixed-effects on the interaction term. 
 
@@ -251,7 +280,8 @@ hist(permute.N.fe7)
 
 ```
     
-    >*Note: this distribution of p values is from permutation under the traditional two-ways fixed effects*
+>Note: this distribution of p values is from permutation under the traditional two-ways fixed effects  
+
 
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE}
@@ -269,7 +299,8 @@ hist(permute.N.fe8)
 
 ```
     
-    >*Note: this distribution of p values is from permutation under the fixed effects based on the interaction between industry-transformed data and year-transformed data*
+>Note: this distribution of p values is from permutation under the fixed effects based on the interaction between industry-transformed data and year-transformed data  
+
 
 In line with my density plots of treatment effect which are close to normal distributions, the two histograms indicate that the distributions of p-values are nearly equally distributed under the null hypothesis that there is no relationship between tax haven status and the attraction of real FDI. Moreover, this paper uses a large sample size with 22024 observations. As a result, using CLT instead of permutation test can also generate statistical inference as good as doing permutation. 
 
@@ -279,7 +310,16 @@ With the p-values extracted from the two permutations, I calculated the false po
 
 The results of two fixed-effects models are reported below. In accordance with the results from permutation tests. The canned OLS provided similar results for statistical inference. The two coefficients of Haven with p-value less than 0.05 indicate the significant difference in terms of US firms making FDI between tax havens and non-haven countries. What needs to be concerned is the constants in different fixed-effects models – negative in the traditional two-ways fixed-effects model, 0.24 in the fixed-effects model based on the interaction between Industry and Year. The meaning of the constant is the average capital investments per job made by US firms in the non-haven countries. Therefore, the negative constant although near to 0 means that 1) US firms have not made any further FDI expansion into non-haven countries, holding constant the jobs created by the previous FDIs, and 2) US firms have hired more employees in the non-haven countries, holding constant the FDI in those host countries. Henceforth, I believe that the relative change of jobs and FDIs needs to be further studied to reveal the actual effect of tax havens on other economies.
 
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+stargazer(fe7, fe8,  
+          dep.var.labels = c("FDI/Job_T","FDI/Job_I"),
+          covariate.labels = c("Haven(=1)","Haven(=1)"),
+          title="Two-way Fixed-Effects Regression Results",
+          add.lines = list(c("Fixed effects", "Yes", "Yes")),
+          align = T )
 
+
+```
 # Model adjustment
 
 An important issue of doing fixed-effects lies in the loss of degree of freedom, leading to imprecise standard errors.  The standard errors from the canned regression are not the right ones, because the OLS assumes that each observation is independent from others. This assumption does not apply to my dataset. In other words, I cannot assume that an FDI project made by a US firm in Software & IT industry in 2003 is independent from the one in 2004. After calculating HC0-HC4 for each fixed-effects model, I picked HC0 (SE(constant) = 0.007179725, SE(Haven) = 0.02431190) for the traditional model, and HC0 (SE(constant) = 0.007695094, SE(Haven) = 0.02485703). The reason why I chose HC0 over others is that HC0 gave me the smallest standard errors for the independent variable, Haven, although the difference among all the five kinds of standard errors is trivial.
@@ -300,3 +340,8 @@ I think the most important lesson I learned is not taking OLS results for grante
 
 
 
+
+
+```{r appendix, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+
+```
