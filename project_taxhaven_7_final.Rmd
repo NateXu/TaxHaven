@@ -67,7 +67,8 @@ This paper uses the panel data from FDIMarket Database. After cleaning the data,
 ```{r, results='asis',echo=FALSE,message=FALSE}
 # summary statistics and coverage rate of the DV in my data 
 
-stargazer(fdi.df2,title = "Summary Statisitcs", summary = TRUE, header = FALSE )
+stargazer(fdi.df2,title = "Summary Statisitcs", 
+          summary = TRUE, header = FALSE )
 
 stargazer(quantile(fdi.df2$Cap.job),
           title = "Coverage Interval of Cap.job", header = FALSE)
@@ -80,7 +81,8 @@ Before going deep into the research design, I would like to explore the data. Th
 
 ```{r,echo=FALSE, warning=FALSE}
 
-plotmeans(Capital.Investment ~ Year, main="Figure 1 FDI 2003-2010", data =fdi.df2 )
+plotmeans(Capital.Investment ~ Year, 
+          main="Figure 1 FDI 2003-2010", data =fdi.df2 )
 
 ```
 
@@ -106,7 +108,8 @@ But my dependent variable (labeled as Cap.job) in Figure 3 tells another story. 
 
 ```{r,echo=FALSE}
 
-plotmeans(Cap.job ~ Year, main="Figure 3 Difference across Years", data =fdi.df2 )
+plotmeans(Cap.job ~ Year, 
+          main="Figure 3 Difference across Years", data =fdi.df2 )
 
 ```
 
@@ -335,8 +338,6 @@ The distribution of p-values under the traditional fixed-effects indicates a hig
 
 With the p-values extracted from the two permutations, I calculated the false positive rates under the 0.05 threshold I picked. It turns out that I will reject my null hypothesis which is actually true 506 out of 10000 times under the traditional method, but 495 out of 10000 times under the method based on the interaction term. Predicated on the criterion of false positive rates, the later model outperformed the traditional one.
 
-The results of two fixed-effects models are reported below. In accordance with the results from permutation tests. Using CLT provided similar results as for the statistical inference. The two coefficients of Haven with p-value less than 0.01 indicate the significant difference in terms of US firms making FDI between tax havens and non-haven countries. The intriguing results are the constants in two different fixed-effects models – negative in the traditional two-ways fixed-effects model, 0.24 in the fixed-effects model based on the interaction between Industry and Year. The meaning of the constant is the average capital investments per job made by US firms in the non-haven countries. Therefore, the negative constant although near to 0 probably means that 1) US firms have not made any further FDI expansion into non-haven countries, holding constant the jobs created by the previous FDIs, and 2) US firms have hired more employees in the non-haven countries, holding constant the FDI in those host countries. Henceforth, I believe that the relative change of jobs and FDIs needs to be further studied to reveal the actual effect of tax havens on other economies.
-
 ```{r,echo=FALSE,message=FALSE,warning=FALSE, results= 'asis' }
 
 stargazer(fe7, fe8,
@@ -346,6 +347,10 @@ stargazer(fe7, fe8,
 
 ```
 > Note: model 1 is the result of traditional fixed-effects model and model 2 is the result of the fixed-effects based on the interaction term between Industry and Year. The dmean_y2 and dmean_y4 are the transformed Cap.job variable, and the dmean_x2 and dmean_x4 are the transformed Haven variable. This table needs to be further adjusted because the standard errors are calculated from the canned OLS regression. The standard errors in the table are imprecise due to heteroscedasticity. This paper uses HC0 because this approach gives me the smallest standard errors. The values under HC0 are reported in the following section. 
+
+
+The results of two fixed-effects models are reported in Table 3. In accordance with the results from permutation tests. Using CLT provided similar results as for the statistical inference. The two coefficients of Haven with p-value less than 0.01 indicate the significant difference in terms of US firms making FDI between tax havens and non-haven countries. The intriguing results are the constants in two different fixed-effects models – negative in the traditional two-ways fixed-effects model, 0.24 in the fixed-effects model based on the interaction between Industry and Year. The meaning of the constant is the average capital investments per job made by US firms in the non-haven countries. Therefore, the negative constant although near to 0 probably means that 1) US firms have not made any further FDI expansion into non-haven countries, holding constant the jobs created by the previous FDIs, and 2) US firms have hired more employees in the non-haven countries, holding constant the FDI in those host countries. Henceforth, I believe that the relative change of jobs and FDIs needs to be further studied to reveal the actual effect of tax havens on other economies.
+
 
 
 # Model adjustment
