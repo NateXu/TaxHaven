@@ -249,7 +249,7 @@ myexp2 <- function(y){
 }
 
 set.seed(3333)
-distcoeffx2 <- replicate(100, myexp2(y=fdi.yeardata5$dmean_y2))
+distcoeffx2 <- replicate(10000, myexp2(y=fdi.yeardata5$dmean_y2))
 
 plot(density(distcoeffx2))
 rug(distcoeffx2,col="black",line=0)
@@ -274,7 +274,7 @@ myexp3 <- function(y){
 }
 
 set.seed(33334)
-distcoeffx3 <- replicate(100, myexp3(y=dmean_y4))
+distcoeffx3 <- replicate(10000, myexp3(y=dmean_y4))
 
 plot(density(distcoeffx3))
 rug(distcoeffx3,col="black",line=0)
@@ -298,7 +298,7 @@ A following question might be “which model performed better?” This is an emp
 # I use summary(lm()) to acquire p values
 attach(fdi.yeardata5)
 set.seed(004)
-N = 100
+N = 10000
 permutefun_fe7<-function(y=dmean_y2, x=dmean_x2){
   model.resample_fe7 = lm(sample(y, replace = F) ~ x)
   summary(model.resample_fe7)$coefficients[2,4]
@@ -319,7 +319,7 @@ hist(permute.N.fe7)
 # The method is the same as the above chunk
 attach(fdi.yeardata7)
 set.seed(005)
-N = 100
+N = 10000
 permutefun_fe8<-function(y=dmean_y4, x=dmean_x4){
   model.resample_fe8 = lm(sample(y, replace = F) ~ x)
   summary(model.resample_fe8)$coefficients[2,4] 
