@@ -4,7 +4,7 @@ author: 'Nate (Mingrui Xu)'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 fontsize: 12pt
 geometry: margin=1.5in
-bibligraphy:Reference.bib
+bibligraphy: Reference.bib
 
 output:
   pdf_document: default
